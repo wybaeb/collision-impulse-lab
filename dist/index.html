@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#08111e" />
+  <title>Импульс · тренажёр столкновений</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308111e'/%3E%3Ccircle cx='23' cy='35' r='13' fill='%233dd9b3'/%3E%3Cpath d='M35 30h17m-7-7 7 7-7 7' stroke='%23ffbd59' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <style>
+    :root { color-scheme: dark; --bg:#08111e; --panel:#0d1a2b; --line:#233754; --text:#eef5ff; --muted:#9db0ca; --mint:#3dd9b3; --yellow:#ffbd59; --red:#ff6b7a; }
+    * { box-sizing:border-box } body { margin:0; min-height:100vh; background:radial-gradient(circle at 16% 0%,#173052 0,#08111e 42rem); color:var(--text); font:16px/1.4 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif }
+    .app { max-width:1500px; min-height:100vh; margin:auto; padding:22px; display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:18px }
+    .workspace,.panel { background:rgba(13,26,43,.84); border:1px solid var(--line); box-shadow:0 20px 55px #02071177 }
+    .workspace { display:grid; grid-template-rows:auto minmax(420px,1fr); min-height:calc(100vh - 44px); border-radius:20px; overflow:hidden }
+    header { padding:19px 22px 17px; display:flex; align-items:center; justify-content:space-between; gap:18px; border-bottom:1px solid var(--line) }
+    h1 { margin:0; font-size:1.15rem; letter-spacing:.02em } .sub { color:var(--muted); font-size:.85rem; margin-top:3px } .status { color:var(--mint); font-size:.82rem; white-space:nowrap }.status::before { content:'●'; margin-right:7px }
+    .stage { position:relative; min-height:0; background:#091524 } canvas { width:100%; height:100%; display:block; touch-action:none; cursor:crosshair }
+    .hint { position:absolute; left:18px; bottom:15px; color:#bfcee1; font-size:.78rem; pointer-events:none; background:#0d1a2bbd; border:1px solid #233754; border-radius:8px; padding:6px 9px }
+    .panel { border-radius:20px; padding:18px; align-self:start; display:grid; gap:17px }.panel h2 { margin:0; font-size:.9rem; letter-spacing:.1em; text-transform:uppercase; color:#c9d7ea }.group { display:grid; gap:8px }.group + .group { padding-top:16px; border-top:1px solid var(--line) }
+    label { color:var(--muted); font-size:.8rem } input,select,button { font:inherit } input,select { width:100%; color:var(--text); background:#091524; border:1px solid #2a4264; border-radius:9px; padding:10px 11px; outline:none } input:focus,select:focus { border-color:var(--mint); box-shadow:0 0 0 3px #3dd9b325 }
+    .actions { display:grid; grid-template-columns:1fr 1fr; gap:9px } button { border:1px solid #385473; background:#142641; color:var(--text); border-radius:9px; padding:10px 9px; cursor:pointer; transition:.15s transform,.15s background } button:hover { background:#1a3456 } button:active { transform:translateY(1px) } .primary { background:var(--mint); color:#04201a; border-color:var(--mint); font-weight:750 }.primary:hover { background:#66e5c7 }.danger { color:#ffd6db; border-color:#71404a; background:#291927 }.wide { grid-column:1/-1 }.data { font:500 .78rem/1.55 ui-monospace,SFMono-Regular,Consolas,monospace; color:#bed0e8; background:#091524; border-radius:9px; padding:10px; min-height:72px; white-space:pre-wrap }.legend { display:grid; gap:8px; font-size:.84rem; color:#cbd8e9 }.legend span { display:flex; gap:9px; align-items:center }.dot { width:10px; height:10px; border-radius:50%; background:var(--mint) }.arrow { width:18px; height:2px; background:var(--yellow); position:relative }.arrow::after { content:''; position:absolute; right:-1px; top:-3px; border-left:6px solid var(--yellow); border-top:4px solid transparent; border-bottom:4px solid transparent }
+    .toast { position:fixed; left:50%; bottom:24px; transform:translate(-50%,20px); opacity:0; pointer-events:none; transition:.2s; background:#e8fff8; color:#062119; border-radius:9px; padding:9px 13px; font-size:.86rem; font-weight:650 }.toast.show { opacity:1; transform:translate(-50%,0) }
+    @media(max-width:780px){.app{padding:10px;grid-template-columns:1fr;gap:10px}.workspace{min-height:63vh;border-radius:14px}.panel{border-radius:14px;grid-template-columns:1fr 1fr}.panel h2{grid-column:1/-1}.group+.group{padding-top:0;border-top:0}header{padding:15px}.sub{display:none}.hint{font-size:.7rem}}
+    @media(max-width:480px){.panel{grid-template-columns:1fr}.workspace{min-height:58vh}.status{display:none}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="workspace" aria-label="Поле моделирования">
+      <header><div><h1>Импульс</h1><div class="sub">Упругие столкновения в замкнутой области</div></div><div class="status" id="status">модель запущена</div></header>
+      <div class="stage"><canvas id="world" aria-label="Холст для создания и запуска шаров"></canvas><div class="hint">Пустое место: потяните — создайте шар · Шар: потяните — бросьте · <b>Shift</b>: сетка и направления</div></div>
+    </section>
+    <aside class="panel" aria-label="Панель модели">
+      <h2>Конфигурация</h2>
+      <div class="group"><label for="configName">Название</label><input id="configName" value="Новая конфигурация" maxlength="40"><label for="configList">Сохранённые модели</label><select id="configList"><option value="">— текущая модель —</option></select></div>
+      <div class="group"><div class="actions"><button class="primary" id="save">Сохранить</button><button id="new">Создать новую</button><button class="danger wide" id="clear">Очистить поле</button></div></div>
+      <div class="group"><label>Выбранный шар</label><div class="data" id="readout">Нажмите и потяните на свободном поле, чтобы создать шар.</div></div>
+      <div class="group legend"><span><i class="dot"></i> Масса пропорциональна площади</span><span><i class="arrow"></i> Направление и величина импульса</span><span>Столкновения шаров и стен — упругие</span></div>
+    </aside>
+  </main>
+  <div class="toast" id="toast" role="status"></div>
+  <script>
+  (() => {
+    const canvas = document.querySelector('#world'), ctx = canvas.getContext('2d');
+    const stage = canvas.parentElement, readout = document.querySelector('#readout'), status = document.querySelector('#status');
+    const nameInput = document.querySelector('#configName'), list = document.querySelector('#configList'), toast = document.querySelector('#toast');
+    let balls = [], selected = null, drag = null, last = performance.now(), id = 0, grid = 32;
+    const colors = ['#3dd9b3','#59aaff','#ffbd59','#de83f2','#ff6b7a','#82d36b'];
+    const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)); const snap=n=>Math.round(n/grid)*grid;
+    function resize(){ const r=stage.getBoundingClientRect(), d=devicePixelRatio||1; canvas.width=r.width*d; canvas.height=r.height*d; canvas.style.width=r.width+'px'; canvas.style.height=r.height+'px'; ctx.setTransform(d,0,0,d,0,0); balls.forEach(b=>{b.x=clamp(b.x,b.r,r.width-b.r);b.y=clamp(b.y,b.r,r.height-b.r)}) }
+    addEventListener('resize',resize); resize();
+    function pos(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+    function direction(dx,dy){ if(!drag?.shift) return {x:dx,y:dy}; const a=Math.atan2(dy,dx), step=Math.PI/4, b=Math.round(a/step)*step, l=Math.hypot(dx,dy); return {x:Math.cos(b)*l,y:Math.sin(b)*l} }
+    function hit(p){return [...balls].reverse().find(b=>Math.hypot(p.x-b.x,p.y-b.y)<=b.r)}
+    canvas.addEventListener('pointerdown',e=>{ const p=pos(e), b=hit(p); canvas.setPointerCapture(e.pointerId); selected=b||null; drag={p,b,shift:e.shiftKey,creating:!b}; if(b){b.vx=0;b.vy=0;b.held=true} updateReadout(); });
+    canvas.addEventListener('pointermove',e=>{ if(!drag)return; drag.shift=e.shiftKey; const p=pos(e); if(drag.b){let x=p.x,y=p.y;if(drag.shift){x=snap(x);y=snap(y)} drag.b.x=clamp(x,drag.b.r,canvas.clientWidth-drag.b.r);drag.b.y=clamp(y,drag.b.r,canvas.clientHeight-drag.b.r);let d=direction(drag.b.x-drag.p.x,drag.b.y-drag.p.y);drag.preview={x:d.x,y:d.y}} else {let d=direction(p.x-drag.p.x,p.y-drag.p.y);drag.preview=d} updateReadout(); });
+    canvas.addEventListener('pointerup',e=>{ if(!drag)return; const p=pos(e); if(drag.b){const d=drag.preview||{x:0,y:0}; drag.b.vx=d.x*2.2;drag.b.vy=d.y*2.2;drag.b.held=false;selected=drag.b} else {const d=drag.preview||{x:0,y:0}, r=clamp(Math.hypot(d.x,d.y)*.48,12,62); if(r>13){let x=drag.p.x,y=drag.p.y;if(drag.shift){x=snap(x);y=snap(y)} const b={id:++id,x:clamp(x,r,canvas.clientWidth-r),y:clamp(y,r,canvas.clientHeight-r),r,vx:0,vy:0,color:colors[id%colors.length]}; balls.push(b);selected=b}} drag=null; updateReadout(); });
+    canvas.addEventListener('pointercancel',()=>{if(drag?.b)drag.b.held=false;drag=null});
+    function mass(b){return +(Math.PI*b.r*b.r/900).toFixed(2)}
+    function updateReadout(){if(!selected){readout.textContent=balls.length?`Шаров: ${balls.length}. Выберите шар, чтобы увидеть его параметры.`:'Нажмите и потяните на свободном поле, чтобы создать шар.';return} const m=mass(selected), v=Math.hypot(selected.vx,selected.vy), p=m*v; readout.textContent=`R = ${selected.r.toFixed(0)} px\nмасса = ${m}\nскорость = ${v.toFixed(1)} px/с\nимпульс = ${p.toFixed(1)}`}
+    function physics(dt){const w=canvas.clientWidth,h=canvas.clientHeight; for(const b of balls){if(!b.held){b.x+=b.vx*dt;b.y+=b.vy*dt;if(b.x-b.r<0){b.x=b.r;b.vx=Math.abs(b.vx)}if(b.x+b.r>w){b.x=w-b.r;b.vx=-Math.abs(b.vx)}if(b.y-b.r<0){b.y=b.r;b.vy=Math.abs(b.vy)}if(b.y+b.r>h){b.y=h-b.r;b.vy=-Math.abs(b.vy)}}} for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy),min=a.r+b.r;if(dist&&dist<min){const nx=dx/dist,ny=dy/dist,overlap=min-dist,ma=mass(a),mb=mass(b);if(!a.held){a.x-=nx*overlap*(mb/(ma+mb));a.y-=ny*overlap*(mb/(ma+mb))}if(!b.held){b.x+=nx*overlap*(ma/(ma+mb));b.y+=ny*overlap*(ma/(ma+mb))}const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rel<0){const impulse=2*rel/(ma+mb);if(!a.held){a.vx+=impulse*mb*nx;a.vy+=impulse*mb*ny}if(!b.held){b.vx-=impulse*ma*nx;b.vy-=impulse*ma*ny}}}}}
+    function arrow(x,y,vx,vy,color,scale=1){const len=Math.hypot(vx,vy);if(len<2)return;const k=Math.min(68,16+len*.08)*scale/len,ex=x+vx*k,ey=y+vy*k;ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(ex,ey);ctx.stroke();const a=Math.atan2(ey-y,ex-x);ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex-8*Math.cos(a-.5),ey-8*Math.sin(a-.5));ctx.lineTo(ex-8*Math.cos(a+.5),ey-8*Math.sin(a+.5));ctx.closePath();ctx.fill()}
+    function draw(){const w=canvas.clientWidth,h=canvas.clientHeight;ctx.clearRect(0,0,w,h);ctx.strokeStyle='rgba(86,127,170,.13)';ctx.lineWidth=1;for(let x=0;x<w;x+=grid){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=grid){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}for(const b of balls){ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fillStyle=b.color+'22';ctx.fill();ctx.lineWidth=b===selected?3:1.5;ctx.strokeStyle=b===selected?'#fff':b.color;ctx.stroke();ctx.beginPath();ctx.arc(b.x-b.r*.25,b.y-b.r*.25,Math.max(2,b.r*.13),0,Math.PI*2);ctx.fillStyle=b.color;ctx.fill();arrow(b.x,b.y,b.vx*mass(b),b.vy*mass(b),'#ffbd59')}if(drag){if(drag.b){arrow(drag.b.x,drag.b.y,drag.preview?.x||0,drag.preview?.y||0,'#ffbd59',.65)}else{const d=drag.preview||{x:0,y:0},r=clamp(Math.hypot(d.x,d.y)*.48,12,62);ctx.setLineDash([5,5]);ctx.strokeStyle='#dbe9ff';ctx.beginPath();ctx.arc(drag.p.x,drag.p.y,r,0,Math.PI*2);ctx.stroke();ctx.setLineDash([])}}}
+    function loop(t){const dt=Math.min(.025,(t-last)/1000);last=t;physics(dt);draw();if(selected&&!drag)updateReadout();requestAnimationFrame(loop)}requestAnimationFrame(loop);
+    function toastMsg(s){toast.textContent=s;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
+    const key='impulse-lab-configs-v1'; function saved(){try{return JSON.parse(localStorage.getItem(key)||'{}')}catch{return{}}} function refresh(){const cur=list.value,listData=saved();list.innerHTML='<option value="">— текущая модель —</option>';Object.keys(listData).forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;list.append(o)});list.value=listData[cur]?cur:''}
+    function model(){return {version:1,balls:balls.map(({x,y,r,vx,vy,color})=>({x,y,r,vx,vy,color}))}}
+    document.querySelector('#save').onclick=async()=>{const n=nameInput.value.trim()||'Без названия', data=saved();data[n]=model();localStorage.setItem(key,JSON.stringify(data));refresh();list.value=n;try{await navigator.clipboard.writeText(JSON.stringify(data[n],null,2));toastMsg('JSON скопирован и модель сохранена')}catch{toastMsg('Модель сохранена (копирование недоступно)')}};
+    document.querySelector('#new').onclick=()=>{balls=[];selected=null;nameInput.value=`Конфигурация ${Object.keys(saved()).length+1}`;list.value='';updateReadout();toastMsg('Создана новая пустая модель')};
+    document.querySelector('#clear').onclick=()=>{balls=[];selected=null;updateReadout();toastMsg('Поле очищено')};
+    list.onchange=()=>{const n=list.value;if(!n)return;const m=saved()[n];balls=m.balls.map(b=>({...b,id:++id}));selected=null;nameInput.value=n;updateReadout();toastMsg('Конфигурация загружена')}; refresh();
+  })();
+  </script>
+</body>
+</html>
